@@ -1,0 +1,202 @@
+---
+title: "Class08"
+author: "Colin Mach"
+format: pdf
+---
+
+In today's mini project we will explore a complete analysis using the unsupervised learning techniques covered in class specifically looking at breast FNA biopsies of tissue to see if tumors are benign or malignant.
+
+## Exploratory data analysis
+
+# Save your input data file into your Project directory
+```{r}
+fna.data <- "WisconsinCancer.csv"
+```
+
+## Complete the following code to input the data and store as wisc.df
+```{r}
+wisc.df <- read.csv(fna.data, row.names=1)
+# We can use -1 here to remove the first column
+wisc.data <- wisc.df[,-1]
+# Create diagnosis vector for later
+diagnosis <- factor(wisc.df[,1])
+```
+
+# Q1. How many observations are in this dataset?
+
+```{r}
+nrow(diagnosis)
+```
+
+There are 569 diagnoses
+
+# Q2. How many of the observations have a malignant diagnosis?
+```{r}
+table(wisc.df$diagnosis)
+```
+
+There are 212 malignant diagnosis
+
+# Q3. How many vairables/features in the data are suffixed with _mean?
+
+```{r}
+meancount <- wisc.data[grepl("_mean",colnames(wisc.data))]
+length(meancount)
+```
+
+There are 10 variables suffixed with _mean.
+
+## Prinicpal Component Analysis
+
+# Now we are performing PCA
+
+```{r}
+# Check column means and standard deviations
+colMeans(wisc.data)
+
+apply(wisc.data,2,sd)
+# Perform PCA on wisc.data by completing the following code
+wisc.pr <- prcomp(wisc.data, scale = TRUE)
+summary(wisc.pr)
+```
+# Q4. From your results, what proportion of the original variance is captured by the first principal components (PC1)?
+
+44.3% of variance is captured by PC1
+
+# Q5. How many principal components (PCs) are required to describe at least 70% of the original variance in the data?
+
+3 Principal components is required to describe at least 70% of the original variance.
+
+# Q6. How many principal components (PCs) are required to describe at least 90% of the original variance in the data?
+
+7 Principal components
+
+# Q7. What stands out to you about this plot? Is it easy or difficult to understand? Why?
+
+```{r}
+biplot(wisc.pr)
+```
+The plot is difficult to understand and is really messy due to the amount of samples(rows) and variables (columns) that are present in the data set.
+
+```{r}
+# Scatter plot observations by components 1 and 2
+plot(wisc.pr$x[,1], wisc.pr$x[,2], col = diagnosis , xlab = "PC1", ylab = "PC2")
+```
+# Q8. Generate a similar plot for principal components 1 and 3. What do you notice about these plots?
+```{r}
+# Repeat for components 1 and 3
+plot(wisc.pr$x[,1], wisc.pr$x[,3], col = diagnosis, 
+     xlab = "PC1", ylab = "PC3")
+```
+The separation between malignant and the benign diagnoses are more mixed together and do not have as clear of a separation in the diagnoses.
+```{r}
+library(ggplot2)
+pc <- as.data.frame(wisc.pr$x)
+pc$diagnosis <- diagnosis
+
+ggplot(pc)+aes(PC1,PC2,col=diagnosis)+geom_point()
+```
+
+```{r}
+# Calculate variance of each component
+pr.var <- wisc.pr$sdev^2
+head(pr.var)
+# Variance explained by each principal component: pve
+pve <- pr.var / sum(pr.var)
+
+# Plot variance explained for each principal component
+plot(pve, xlab = "Principal Component", 
+     ylab = "Proportion of Variance Explained", 
+     ylim = c(0, 1), type = "o")
+# Alternative scree plot of the same data, note data driven y-axis
+barplot(pve, ylab = "Precent of Variance Explained",
+     names.arg=paste0("PC",1:length(pve)), las=2, axes = FALSE)
+axis(2, at=pve, labels=round(pve,2)*100 )
+## ggplot based graph
+#install.packages("factoextra")
+library(factoextra)
+fviz_eig(wisc.pr, addlabels = TRUE)
+```
+
+# Q9. For the first principal component, what is the component of the loading vector (i.e. wisc.pr$rotation[,1]) for the feature concave.points_mean?
+
+```{r}
+wisc.pr$rotation[,1]
+a <- wisc.pr$rotation[,1]
+a["concave.points_mean"]
+```
+The loading vector for concave.points_mean in PC1 is -0.261
+
+# Q10. What is the minimum number of principal components required to explain 80% of the variance of the data?
+
+The minimum number is 5 principal components
+
+## 3. Hiearchial Clustering
+
+```{r}
+# Scale the wisc.data data using the "scale()" function
+data.scaled <- scale(wisc.data)
+data.dist <- dist(data.scaled)
+wisc.hclust <- hclust(data.dist, method="complete")
+```
+
+# Q11. Using the plot() and abline() functions, what is the height at which the clustering model has 4 clusters?
+```{r}
+plot(wisc.hclust)
+abline(h = 19, col = "red", lty=2)
+```
+
+The height is about 19 for which the model has 4 clusters
+
+```{r}
+wisc.hclust.clusters <- cutree(wisc.hclust, k=4)
+table(wisc.hclust.clusters, diagnosis)
+```
+
+# Q12. Can you find a better cluster vs diagnoses match by cutting into a different number of clusters between 2 and 10?
+
+A better cluster vs diagnoses match would be 10 as evidenced by the following code where most clusters are highly associated with either benign or malignant diagnoses
+```{r}
+wisc.hclust.clusters <- cutree(wisc.hclust, k=10)
+table(wisc.hclust.clusters, diagnosis)
+```
+
+# Q13. Which method gives your favorite results for the same data.dist dataset? Explain your reasoning. 
+
+The best results came from complete since it had much tigheter clusters even though they are closer together.
+
+## 5. Combining methods 
+
+```{r}
+d <- dist(wisc.pr$x[,1:7])
+wisc.pr.hclust <- hclust(d, method="ward.D2")
+```
+This is our cluster dendrogram which has two distinct groups
+
+```{r}
+grps <- cutree(wisc.pr.hclust, k=2)
+table(grps)
+table(grps, diagnosis)
+plot(wisc.pr$x[,1:2], col=grps)
+plot(wisc.pr$x[,1:2], col=diagnosis)
+```
+
+
+
+```{r}
+(179+333)/nrow(wisc.data)
+```
+This is the amount of successful identifications of benign or malignant breast cancer
+
+# Q15. How well does the newly created model with four clusters separate out the two diagnoses?
+```{r}
+grp <- cutree(wisc.pr.hclust, k=4)
+table(grp, diagnosis)
+```
+
+The four clusters seem a bit worse since in cluster 3 there are a noninsignificant amount of false positives
+
+
+
+
+
