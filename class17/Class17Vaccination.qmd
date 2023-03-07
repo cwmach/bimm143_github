@@ -1,0 +1,188 @@
+---
+title: "Class17: Mini Project"
+author: "Colin Mach (A16673100)"
+format: pdf
+---
+
+```{r}
+vax <- read.csv("covid19vaccinesbyzipcode_test.csv")
+head(vax)
+```
+
+# Q1
+
+percent_of_population_fully vaccinated details the total number of people fully vaccinated
+
+# Q2
+
+zip_code_tabulation_area details the Zip code tabulation area
+
+# Q3 
+
+The earliest date is 1/5/2021
+
+# Q4
+
+The latest date is 2/28/2023
+
+Using the skim() function for a quick overview of a new data set
+
+```{r}
+skimr::skim(vax)
+```
+
+# Q5
+
+There are 13 numeric columns in this dataset.
+
+# Q6
+
+```{r}
+sum(is.na(vax$persons_fully_vaccinated))
+```
+There are 16525 NA values in the fully vaccinated column
+
+# Q7
+
+```{r}
+round(sum(is.na(vax$persons_fully_vaccinated))/nrow(vax), digits = 3)*100
+```
+8.3% of the column for fully vaccinated data is missing
+
+# Q8
+
+The data is missing probably because it wasn't reported in these specific zip codes for these dates or was redacted due to privacy laws due to being federal land or not state territory
+
+```{r}
+library(lubridate)
+today()
+```
+
+```{r}
+vax$as_of_date <- ymd(vax$as_of_date)
+today() - vax$as_of_date[1]
+```
+
+# Q9
+
+7 days have passed since the last update of the dataset
+
+```{r}
+today() - vax$as_of_date[nrow(vax)]
+```
+
+# Q10
+
+```{r}
+length(unique(vax$as_of_date))
+```
+There are 113 unique dates
+
+```{r}
+library(zipcodeR)
+geocode_zip('92037')
+zip_distance('92037','91108')
+```
+```{r}
+reverse_zipcode(c('92037', "92019"))
+```
+
+```{r}
+sd <- vax[vax$county =="San Diego",]
+```
+
+```{r}
+library(dplyr)
+sd <- filter(vax, county == "San Diego")
+nrow(sd)
+sd.10 <- filter(vax, county =="San Diego" & age5_plus_population > 10000)
+```
+
+# Q11
+
+```{r}
+length(unique(sd))
+```
+There are 18 unique zip codes for San Diego
+
+# Q12
+
+```{r}
+sd$zip_code_tabulation_area[which.max(sd$age12_plus_population)]
+```
+
+# Q13
+
+```{r}
+recentsd <- filter(vax, as_of_date == "2023-02-28")
+mean(recentsd$percent_of_population_fully_vaccinated, na.rm = TRUE)*100
+```
+
+69% is the overall average of the percent of population fully vaccinated based on data we currently have in SD county as of 2023-02-28
+
+# Q14
+
+```{r}
+library(ggplot2)
+ggplot(recentsd, aes(x=percent_of_population_fully_vaccinated)) + geom_histogram() + labs (title = "Vaccination Rate Across San Diego as of Last Week", x = "Percent of Population Fully Vaxed", y = "Count (ZIP code area)")
+```
+
+# Focus on UCSD/La Jolla
+
+```{r}
+ucsd <- filter(sd, zip_code_tabulation_area=="92037")
+ucsd[1,]$age5_plus_population
+```
+# Q15
+
+```{r}
+ucsdgraph <- ggplot(ucsd) + aes(x = as_of_date, y = percent_of_population_fully_vaccinated) + geom_point() + geom_line(group = 1) + ylim(c(0,1)) + labs(x="Date", y = "Percent Vaccinated")
+```
+
+# Q16
+
+```{r}
+vax.36 <- filter(vax, age5_plus_population > 36144 & as_of_date == "2023-02-28")
+meanline <- mean(vax.36$percent_of_population_fully_vaccinated)
+ucsdgraph + geom_hline(aes(yintercept=meanline))
+```
+
+# Q17
+
+```{r}
+summary(vax.36$percent_of_population_fully_vaccinated)
+```
+
+# Q18
+
+```{r}
+ggplot(vax.36,aes(percent_of_population_fully_vaccinated)) + geom_histogram() + xlim(0,1)
+```
+
+# Q19
+
+```{r}
+vax %>% filter(as_of_date == "2023-02-28") %>% filter(zip_code_tabulation_area=="92109") %>% select(percent_of_population_fully_vaccinated)
+vax %>% filter(as_of_date == "2023-02-28") %>% filter(zip_code_tabulation_area=="92040") %>% select(percent_of_population_fully_vaccinated)
+```
+
+Both 92109 and 92040 ZIP code areas are below the average value I calculated for La Jolla vaccination rate.
+
+# Q20
+
+```{r}
+vax.36.all <- filter(vax, age5_plus_population > 36144)
+
+
+ggplot(vax.36.all) +
+  aes(x = as_of_date, y = percent_of_population_fully_vaccinated,
+      percent_of_population_fully_vaccinated, 
+      group=zip_code_tabulation_area) +
+  geom_line(alpha=0.2, color="blue") +
+  ylim(0,1) +
+  labs(x="Date", y="Percent Vaccinated",
+       title="Vaccination rate across California",
+       subtitle="Only areas with a population above 36k are shown") +
+  geom_hline(yintercept = meanline, linetype=2)
+```
+
