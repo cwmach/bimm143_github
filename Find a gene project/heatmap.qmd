@@ -1,0 +1,16 @@
+---
+title: "Heatmap"
+format: html
+---
+
+```{r}
+library(bio3d)
+fasta = read.fasta("aln-fasta.txt")
+seqid = seqidentity(fasta)
+library(gplots)
+heatmap.2(seqid, dendrogram = "both", col = rev(colorRampPalette(c("yellow","orange", "red"))(100)), trace = "none", margins = c(10, 10), cexCol = 0.9, cexRow = 0.9, labRow = fasta$id, labCol = fasta$id)
+```
+```{r}
+
+```
+

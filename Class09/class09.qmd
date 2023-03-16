@@ -1,0 +1,189 @@
+---
+title: "Class09"
+author: "Colin Mach"
+format: pdf
+---
+
+# What is in the PDB anyway?
+
+Let's begin by seeing what is in this database:
+```{r}
+pdbstats <- read.csv("PDB.csv", row.names = 1)
+head(pdbstats)
+```
+
+# Q1. What percentage of structures in the PDB are solved by X-Ray and Electron Microscopy?
+
+```{r}
+n.xray <- sum(as.numeric(gsub(",","",pdbstats$X.ray)))
+n.em <- sum(as.numeric(gsub(",","",pdbstats$EM)))
+n.total <- sum(as.numeric(gsub(",","", pdbstats$Total)))
+p.xray <- (n.xray/n.total)*100
+p.em <- (n.em/n.total)*100
+round(p.xray,2)
+round(p.em,2)
+```
+There are `r round(n.xray)` protein structures (`r round(p.xray,2)`%) and `r n.em` (`r round(p.em,2)`%) EM structures in the current PDB database
+
+# Q2. What proportion of structures in the PDB are protein?
+
+```{r}
+174642/sum(n.total)
+```
+0.87 of structures in the PDB are protein.
+
+#Q3 Type HIV in the PDB website search box on the home page and determine how many HIV-1 protease structures are in the current PDB?
+
+There are 240 HIV-1 protease structures in the current PDB
+
+A wee pic of HIV-1 Protease from Molstar
+
+![An image I like whilst learning how to use Molstar](1HSG.png)
+
+## Working with structure data in R
+
+We will use the `bio3d` package for this 
+```{r}
+library(bio3d)
+```
+
+Read a PDB file from the online database.
+
+```{r}
+pdb <- read.pdb("1hsg")
+pdb
+```
+
+```{r}
+head(pdb$atom)
+```
+
+What is the first residue 3 letter code
+```{r}
+pdb$atom$resid[1]
+aa321(pdb$atom$resid[1])
+```
+# Q7. How many amino acid residues
+
+198 amino acid residues
+
+# Q8. Name one of the two non-protein residues?
+
+MK1
+
+# Q9. How many protein chains are in this structure?
+
+2 protein chains
+
+```{r}
+adk <- read.pdb("6s36")
+adk
+```
+
+```{r}
+m <- nma(adk)
+plot(m)
+```
+```{r}
+mktrj(m, file="adk_m7.pdb")
+```
+
+# Q10. Which of the packages above is found only on Bioconductor and not on Cran
+
+msa is the package that is found on bioconductor
+
+# Q11. Which of the above packages is not found on BioConductor or CRAN?
+
+Grantlab/bio3d-view is found on bitbucket and not Bioconductor or Cran
+
+# Q12.  True or False? Functions from the devtools package can be used to install packages from GitHub and BitBucket?
+
+True
+
+```{r}
+library(bio3d)
+aa <- get.seq("1ake_A")
+aa
+```
+# Q13. How many amino acids are in this sequence, i.e. how long is this sequence?
+
+The sequence is 214 amino acids long.
+
+```{r}
+# Blast or hmmer search 
+#b <- blast.pdb(aa)
+```
+I could save and load my blast results next time so I don't need to run the search every time.
+
+```{r}
+#saveRDS(b, file="blast_results.RDS")
+```
+
+```{r}
+b <- readRDS("blast_results.RDS")
+```
+
+```{r}
+#Plot a summary of search results
+hits <- plot(b)
+```
+
+```{r}
+hits$pdb.id
+```
+
+```{r}
+# Download releated PDB files
+files <- get.pdb(hits$pdb.id, path="pdbs", split=TRUE, gzip=TRUE)
+```
+
+Next we are going to align and superpose all these structures
+
+```{r}
+pdbs <- pdbaln(files, fit = TRUE, exefile = "msa")
+pdbs
+```
+```{r}
+# Vector containing PDB codes for figure axis
+ids <- basename.pdb(pdbs$id)
+
+# Draw schematic alignment
+#plot(pdbs, labels=ids)
+```
+
+```{r}
+anno <- pdb.annotate(ids)
+unique(anno$source)
+```
+
+```{r}
+# Perform PCA
+pc.xray <- pca(pdbs)
+plot(pc.xray)
+```
+
+```{r}
+plot(pc.xray, 1:2)
+```
+Let's cluster our structures
+```{r}
+# Calculate RMSD
+rd <- rmsd(pdbs)
+
+# Structure-based clustering
+hc.rd <- hclust(dist(rd))
+grps.rd <- cutree(hc.rd, k=3)
+```
+
+And now my graph is colored by groups.
+
+```{r}
+plot(pc.xray, 1:2, col="grey50", bg=grps.rd, pch=21, cex=1)
+```
+
+```{r}
+# Visualize first principal component
+pc1 <- mktrj(pc.xray, pc=1, file="pc_1.pdb")
+```
+
+We can now open this trajectory in Molstar.
