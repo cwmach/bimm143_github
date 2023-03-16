@@ -5,3 +5,4 @@ My classwork from [BIMM143](https://bioboot.github.io/bimm143_W23/schedule/) at 
 - Class 4: Introduction to R
 - Class 5: Data visualization with ggplot2
 - Candy Mini Project: [code](https://github.com/cwmach/bimm143_github/blob/main/candymini/candymini.qmd)
+- Class 17: Vaccination Rate Mini Project
